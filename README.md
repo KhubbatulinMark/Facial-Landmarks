@@ -22,7 +22,7 @@ File with coordinates of points for all faces: train / landmarks.csv.
 
 The test sample contains 16000 images.
 
-<a name=" https://cloud.mail.ru/public/xPaB/twWLKix2c "><h2>data</h2></a>
+Download: https://cloud.mail.ru/public/xPaB/twWLKix2c
 
 <a name="train"><h2>Training</h2></a>
 ```bash
