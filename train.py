@@ -14,6 +14,7 @@ import torchvision.models as models
 import tqdm
 from torch.nn import functional as fnn
 from torch.utils.data import DataLoader
+from torch.cuda.amp import autocast, GradScale
 from torchvision import transforms
 
 from utils import NUM_PTS, CROP_SIZE
@@ -30,8 +31,8 @@ def parse_arguments():
     parser.add_argument("--name", "-n", help="Experiment name (for saving checkpoints and submits).",
                         default="baseline")
     parser.add_argument("--data", "-d", help="Path to dir with target images & landmarks.", default=None)
-    parser.add_argument("--batch-size", "-b", default=128, type=int)  # 512 is OK for resnet18 finetuning @ 3GB of VRAM
-    parser.add_argument("--epochs", "-e", default=1, type=int)
+    parser.add_argument("--batch-size", "-b", default=512, type=int)  # 512 is OK for resnet18 finetuning @ 3GB of VRAM
+    parser.add_argument("--epochs", "-e", default=15, type=int)
     parser.add_argument("--learning-rate", "-lr", default=1e-3, type=float)
     parser.add_argument("--gpu", action="store_true")
     return parser.parse_args()
@@ -43,9 +44,9 @@ def train(model, loader, loss_fn, optimizer, device):
     for batch in tqdm.tqdm(loader, total=len(loader), desc="training..."):
         images = batch["image"].to(device)  # B x 3 x CROP_SIZE x CROP_SIZE
         landmarks = batch["landmarks"]  # B x (2 * NUM_PTS)
-
-        pred_landmarks = model(images).cpu()  # B x (2 * NUM_PTS)
-        loss = loss_fn(pred_landmarks, landmarks, reduction="mean")
+        with autocast():
+            pred_landmarks = model(images).cpu()  # B x (2 * NUM_PTS)
+            loss = loss_fn(pred_landmarks, landmarks, reduction="mean")
         train_loss.append(loss.item())
 
         optimizer.zero_grad()
@@ -111,8 +112,7 @@ def main(args):
 
     device = torch.device("cuda:0")# if args.gpu and torch.cuda.is_available() else torch.device("cpu")
     print("Creating model...")
-    model = models.resnet18(pretrained=True)
-    model.requires_grad_(False)
+    model = models.densenet169(pretrained=True)
 
     model.fc = nn.Linear(model.fc.in_features, 2 * NUM_PTS, bias=True)
     model.fc.requires_grad_(True)
@@ -121,7 +121,6 @@ def main(args):
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
     loss_fn = fnn.mse_loss
-    time.sleep(60)
     # 2. train & validate
     print("Ready for training...")
     best_val_loss = np.inf
