@@ -44,12 +44,9 @@ def train(model, loader, loss_fn, optimizer, device):
     for batch in tqdm.tqdm(loader, total=len(loader), desc="training..."):
         images = batch["image"].to(device)  # B x 3 x CROP_SIZE x CROP_SIZE
         landmarks = batch["landmarks"]  # B x (2 * NUM_PTS)
-        with autocast():
-            pred_landmarks = model(images).cpu()  # B x (2 * NUM_PTS)
-            loss = loss_fn(pred_landmarks, landmarks, reduction="mean")
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
+
+        pred_landmarks = model(images).cpu()  # B x (2 * NUM_PTS)
+        loss = loss_fn(pred_landmarks, landmarks, reduction="mean")
 
         train_loss.append(loss.item())
         optimizer.zero_grad()
@@ -102,7 +99,7 @@ def main(args):
         CropCenter(CROP_SIZE),
         TransformByKeys(transforms.ToPILImage(), ("image",)),
         TransformByKeys(transforms.ToTensor(), ("image",)),
-        TransformByKeys(transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.25, 0.25, 0.25]), ("image",)),
+        TransformByKeys(transforms.Normalize(mean=[0.485, 0.456, 0.406] , std=[0.229, 0.224, 0.225]), ("image",)),
     ])
 
     print("Reading data...")
@@ -113,19 +110,18 @@ def main(args):
     val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True,
                                 shuffle=False, drop_last=False)
 
-    device = torch.device("cuda:0")# if args.gpu and torch.cuda.is_available() else torch.device("cpu")
+    device = torch.device("cuda:0") # if args.gpu and torch.cuda.is_available() else torch.device("cpu")
     print("Creating model...")
     model = models.densenet169(pretrained=True)
 
-    model.classifier = nn.Linear(model.fc.in_features, 2 * NUM_PTS, bias=True)
+    model.classifier = nn.Linear(model.classifier.in_features, 2 * NUM_PTS, bias=True)
     model.classifier.requires_grad_(True)
 
     model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
     loss_fn = fnn.mse_loss
-    scaler = GradScaler()
-    # 2. train & validate
+# 2. train & validate
     print("Ready for training...")
     best_val_loss = np.inf
     for epoch in range(args.epochs):
@@ -145,6 +141,11 @@ def main(args):
     with open(os.path.join("runs", f"{args.name}_best.pth"), "rb") as fp:
         best_state_dict = torch.load(fp, map_location="cpu")
         model.load_state_dict(best_state_dict)
+
+    train_predictions = predict(model, train_dataloader, device)
+    with open(os.path.join("runs", f"{args.name}_train_predictions.pkl"), "wb") as fp:
+        pickle.dump({"image_names": train_dataset.image_names,
+                     "landmarks": train_predictions}, fp)
 
     test_predictions = predict(model, test_dataloader, device)
     with open(os.path.join("runs", f"{args.name}_test_predictions.pkl"), "wb") as fp:
