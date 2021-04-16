@@ -14,7 +14,7 @@ import torchvision.models as models
 import tqdm
 from torch.nn import functional as fnn
 from torch.utils.data import DataLoader
-from torch.cuda.amp import autocast, GradScale
+from torch.cuda.amp import autocast, GradScaler
 from torchvision import transforms
 
 from utils import NUM_PTS, CROP_SIZE
@@ -47,8 +47,11 @@ def train(model, loader, loss_fn, optimizer, device):
         with autocast():
             pred_landmarks = model(images).cpu()  # B x (2 * NUM_PTS)
             loss = loss_fn(pred_landmarks, landmarks, reduction="mean")
-        train_loss.append(loss.item())
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
 
+        train_loss.append(loss.item())
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -121,6 +124,7 @@ def main(args):
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
     loss_fn = fnn.mse_loss
+    scaler = GradScaler()
     # 2. train & validate
     print("Ready for training...")
     best_val_loss = np.inf
