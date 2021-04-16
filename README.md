@@ -27,5 +27,7 @@ Download: https://cloud.mail.ru/public/xPaB/twWLKix2c
 <a name="train"><h2>Training</h2></a>
 ```bash
 python train.py --name "baseline" --data "PATH_TO_DATA" [--gpu]
+example 
+python train.py --name "dance" --data169v2 'data/' --gpu -e 20
 ```
 
