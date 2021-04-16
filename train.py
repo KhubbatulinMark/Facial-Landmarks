@@ -117,8 +117,8 @@ def main(args):
     print("Creating model...")
     model = models.densenet169(pretrained=True)
 
-    model.fc = nn.Linear(model.fc.in_features, 2 * NUM_PTS, bias=True)
-    model.fc.requires_grad_(True)
+    model.classifier = nn.Linear(model.fc.in_features, 2 * NUM_PTS, bias=True)
+    model.classifier.requires_grad_(True)
 
     model.to(device)
 
