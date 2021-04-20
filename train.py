@@ -46,7 +46,6 @@ def parse_arguments():
 def train(model, loader, loss_fn, optimizer, device):
     model.train()
     train_loss = []
-    n_iter = len(loader) * epoch
     print(f"training... {len(loader)} iters \n")
     for batch in loader:
         images = batch["image"].to(device)  # B x 3 x CROP_SIZE x CROP_SIZE
@@ -66,7 +65,6 @@ def train(model, loader, loss_fn, optimizer, device):
 def validate(model, loader, loss_fn, device):
     model.eval()
     val_loss = []
-    n_iter = len(loader) * epoch
     print(f"validating... {len(loader)} iters \n")
     for batch in loader:
         images = batch["image"].to(device)
