@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torchvision.models as models
 
+from utils import NUM_PTS, CROP_SIZE
+
 
 def create_model():
     model = models.resnext101_32x8d(pretrained=True)
