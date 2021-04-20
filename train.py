@@ -35,7 +35,7 @@ def parse_arguments():
     parser.add_argument("--name", "-n", help="Experiment name (for saving checkpoints and submits).",
                         default="baseline")
     parser.add_argument("--data", "-d", help="Path to dir with target images & landmarks.", default=None)
-    parser.add_argument("--batch-size", "-b", default=512, type=int)  # 512 is OK for resnet18 finetuning @ 3GB of VRAM
+    parser.add_argument("--batch-size", "-b", default=256, type=int)  # 512 is OK for resnet18 finetuning @ 3GB of VRAM
     parser.add_argument("--epochs", "-e", default=15, type=int)
     parser.add_argument("--learning-rate", "-lr", default=1e-3, type=float)
     parser.add_argument("--gpu", action="store_true")
