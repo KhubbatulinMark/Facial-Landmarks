@@ -17,7 +17,6 @@ from torch.nn import functional as fnn
 from torch.utils.data import DataLoader
 from torch.cuda.amp import autocast, GradScaler
 from torchvision import transforms
-from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import StepLR
 
 from model import create_model
@@ -60,12 +59,6 @@ def train(model, loader, loss_fn, optimizer, device, epoch, writer):
         loss.backward()
         optimizer.step()
 
-        n_iter = n_iter + 1
-        writer.add_scalar('Loss/train', loss, n_iter)
-        if n_iter % 5000 == 0:
-            with open("temp_chkpt.pth", "wb") as fp:
-                torch.save(model.state_dict(), fp)
-
     return np.mean(train_loss)
 
 
@@ -82,9 +75,6 @@ def validate(model, loader, loss_fn, device, epoch, writer):
             pred_landmarks = model(images).cpu()
         loss = loss_fn(pred_landmarks, landmarks, reduction="mean")
         val_loss.append(loss.item())
-
-        n_iter = n_iter + 1
-        writer.add_scalar('Loss/val', loss, n_iter)
 
     return np.mean(val_loss)
 
@@ -137,7 +127,6 @@ def main(args):
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
     loss_fn = fnn.mse_loss
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
-    writer = SummaryWriter()
 
 # 2. train & validate
     print("Ready for training...")
@@ -146,17 +135,14 @@ def main(args):
         train_loss = train(model,
                            train_dataloader,
                            loss_fn, optimizer,
-                           device=device,
-                           epoch=epoch,
-                           writer=writer)
+                           device=device
+                           )
 
         val_loss = validate(model,
                             val_dataloader,
                             loss_fn,
-                            device=device,
-                            epoch=epoch,
-                            writer=writer)
-        # if epoch > 0:
+                            device=device
+                            )
         scheduler.step()
         print("Epoch #{:2}:\ttrain loss: {:5.2}\tval loss: {:5.2}".format(epoch, train_loss, val_loss))
         if val_loss < best_val_loss:
