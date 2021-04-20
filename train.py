@@ -39,7 +39,7 @@ def parse_arguments():
     parser.add_argument("--epochs", "-e", default=15, type=int)
     parser.add_argument("--learning-rate", "-lr", default=1e-3, type=float)
     parser.add_argument("--gpu", action="store_true")
-    parser.add_argument("--gamma", default=0.1, type=float)
+    parser.add_argument("--gamma", 'g', default=0.1, type=float)
     return parser.parse_args()
 
 
