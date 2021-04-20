@@ -114,12 +114,13 @@ def main(args):
 
     print("Reading data...")
     train_dataset = ThousandLandmarksDataset(os.path.join(args.data, "train"), train_transforms, split="train")
+    print(f"Train sample size {len(train_dataset)}")
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True,
                                   shuffle=True, drop_last=True)
     val_dataset = ThousandLandmarksDataset(os.path.join(args.data, "train"), train_transforms, split="val")
     val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True,
                                 shuffle=False, drop_last=False)
-
+    print(f"Validation sample size {len(val_dataset)}")
     device = torch.device("cuda:0") if args.gpu else torch.device("cpu")
 
     print("Creating model...")

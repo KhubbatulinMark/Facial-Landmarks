@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import cv2
 import numpy as np
@@ -83,6 +84,11 @@ class ThousandLandmarksDataset(data.Dataset):
             else os.path.join(root, "test_points.csv")
         images_root = os.path.join(root, "images")
 
+        noisy_path = os.path.join(root, 'noisy.txt')
+        with open(noisy_path, "rb") as fp:
+            self.noisy_file = pickle.load(fp)
+
+        self.noisy_file = []
         self.image_names = []
         self.landmarks = []
 
@@ -100,6 +106,8 @@ class ThousandLandmarksDataset(data.Dataset):
                     continue  # has not reache "images")d start of val part of data
                 elements = line.strip().split("\t")
                 image_name = os.path.join(images_root, elements[0])
+                if image_name in self.noisy_file:
+                    break
                 self.image_names.append(image_name)
 
                 if split in ("train", "val"):
