@@ -7,20 +7,25 @@ import time
 from argparse import ArgumentParser
 
 import numpy as np
+import tqdm
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.models as models
-import tqdm
 from torch.nn import functional as fnn
 from torch.utils.data import DataLoader
 from torch.cuda.amp import autocast, GradScaler
 from torchvision import transforms
+from torch.utils.tensorboard import SummaryWriter
+from torch.optim.lr_scheduler import StepLR
 
+from model import create_model
 from utils import NUM_PTS, CROP_SIZE
 from utils import ScaleMinSideToSize, CropCenter, TransformByKeys
 from utils import ThousandLandmarksDataset
 from utils import restore_landmarks_batch, create_submission
+
 
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -38,28 +43,38 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def train(model, loader, loss_fn, optimizer, device):
+def train(model, loader, loss_fn, optimizer, device, epoch, writer):
     model.train()
     train_loss = []
-    for batch in tqdm.tqdm(loader, total=len(loader), desc="training..."):
+    n_iter = len(loader) * epoch
+    print(f"training... {len(loader)} iters \n")
+    for batch in loader:
         images = batch["image"].to(device)  # B x 3 x CROP_SIZE x CROP_SIZE
         landmarks = batch["landmarks"]  # B x (2 * NUM_PTS)
 
         pred_landmarks = model(images).cpu()  # B x (2 * NUM_PTS)
         loss = loss_fn(pred_landmarks, landmarks, reduction="mean")
-
         train_loss.append(loss.item())
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
+        n_iter = n_iter + 1
+        writer.add_scalar('Loss/train', loss, n_iter)
+        if n_iter % 5000 == 0:
+            with open("temp_chkpt.pth", "wb") as fp:
+                torch.save(model.state_dict(), fp)
+
     return np.mean(train_loss)
 
 
-def validate(model, loader, loss_fn, device):
+def validate(model, loader, loss_fn, device, epoch, writer):
     model.eval()
     val_loss = []
-    for batch in tqdm.tqdm(loader, total=len(loader), desc="validation..."):
+    n_iter = len(loader) * epoch
+    print(f"validating... {len(loader)} iters \n")
+    for batch in loader:
         images = batch["image"].to(device)
         landmarks = batch["landmarks"]
 
@@ -67,6 +82,9 @@ def validate(model, loader, loss_fn, device):
             pred_landmarks = model(images).cpu()
         loss = loss_fn(pred_landmarks, landmarks, reduction="mean")
         val_loss.append(loss.item())
+
+        n_iter = n_iter + 1
+        writer.add_scalar('Loss/val', loss, n_iter)
 
     return np.mean(val_loss)
 
@@ -110,23 +128,36 @@ def main(args):
     val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True,
                                 shuffle=False, drop_last=False)
 
-    device = torch.device("cuda:0") # if args.gpu and torch.cuda.is_available() else torch.device("cpu")
+    device = torch.device("cuda: 0") if args.gpu else torch.device("cpu")
+
     print("Creating model...")
-    model = models.densenet169(pretrained=True)
-
-    model.classifier = nn.Linear(model.classifier.in_features, 2 * NUM_PTS, bias=True)
-    model.classifier.requires_grad_(True)
-
+    model = create_model()
     model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
     loss_fn = fnn.mse_loss
+    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+    writer = SummaryWriter()
+
 # 2. train & validate
     print("Ready for training...")
     best_val_loss = np.inf
     for epoch in range(args.epochs):
-        train_loss = train(model, train_dataloader, loss_fn, optimizer, device=device)
-        val_loss = validate(model, val_dataloader, loss_fn, device=device)
+        train_loss = train(model,
+                           train_dataloader,
+                           loss_fn, optimizer,
+                           device=device,
+                           epoch=epoch,
+                           writer=writer)
+
+        val_loss = validate(model,
+                            val_dataloader,
+                            loss_fn,
+                            device=device,
+                            epoch=epoch,
+                            writer=writer)
+        # if epoch > 0:
+        scheduler.step()
         print("Epoch #{:2}:\ttrain loss: {:5.2}\tval loss: {:5.2}".format(epoch, train_loss, val_loss))
         if val_loss < best_val_loss:
             best_val_loss = val_loss
