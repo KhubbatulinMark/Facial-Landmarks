@@ -47,7 +47,7 @@ def train(model, loader, loss_fn, optimizer, device):
     model.train()
     train_loss = []
     print(f"training... {len(loader)} iters \n")
-    for batch in loader:
+    for batch in tqdm.tqdm(loader, total=len(loader), desc="training..."):
         images = batch["image"].to(device)  # B x 3 x CROP_SIZE x CROP_SIZE
         landmarks = batch["landmarks"]  # B x (2 * NUM_PTS)
 
@@ -66,7 +66,7 @@ def validate(model, loader, loss_fn, device):
     model.eval()
     val_loss = []
     print(f"validating... {len(loader)} iters \n")
-    for batch in loader:
+    for batch in tqdm.tqdm(loader, total=len(loader), desc="validation..."):
         images = batch["image"].to(device)
         landmarks = batch["landmarks"]
 
@@ -106,7 +106,10 @@ def main(args):
         CropCenter(CROP_SIZE),
         TransformByKeys(transforms.ToPILImage(), ("image",)),
         TransformByKeys(transforms.ToTensor(), ("image",)),
-        TransformByKeys(transforms.Normalize(mean=[0.485, 0.456, 0.406] , std=[0.229, 0.224, 0.225]), ("image",)),
+        TransformByKeys(transforms.Normalize(mean=[0.39963884, 0.31994772, 0.28253724],
+                                             std=[0.33419772, 0.2864468, 0.26987]),
+                                             ("image",)
+                        ),
     ])
 
     print("Reading data...")
