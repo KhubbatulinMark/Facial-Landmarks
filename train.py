@@ -118,7 +118,7 @@ def main(args):
     val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True,
                                 shuffle=False, drop_last=False)
 
-    device = torch.device("cuda: 0") if args.gpu else torch.device("cpu")
+    device = torch.device("cuda:0") if args.gpu else torch.device("cpu")
 
     print("Creating model...")
     model = create_model()
