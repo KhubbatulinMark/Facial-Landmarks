@@ -105,9 +105,8 @@ class ThousandLandmarksDataset(data.Dataset):
                     continue  # has not reache "images")d start of val part of data
                 elements = line.strip().split("\t")
                 image_name = os.path.join(images_root, elements[0])
-                if elements[0] in self.noisy_file:
-                    break
-                    print(elements[0])
+                if (elements[0] in self.noisy_file) and (split != 'test'):
+                    continue
                 self.image_names.append(image_name)
 
                 if split in ("train", "val"):
