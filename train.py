@@ -43,7 +43,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def train(model, loader, loss_fn, optimizer, device, epoch, writer):
+def train(model, loader, loss_fn, optimizer, device):
     model.train()
     train_loss = []
     n_iter = len(loader) * epoch
@@ -63,7 +63,7 @@ def train(model, loader, loss_fn, optimizer, device, epoch, writer):
     return np.mean(train_loss)
 
 
-def validate(model, loader, loss_fn, device, epoch, writer):
+def validate(model, loader, loss_fn, device):
     model.eval()
     val_loss = []
     n_iter = len(loader) * epoch
