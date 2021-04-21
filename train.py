@@ -140,7 +140,7 @@ def main(args):
                             loss_fn,
                             device=device
                             )
-        scheduler.step()
+        scheduler.step(val_loss)
         print("Epoch #{:2}:\ttrain loss: {:5.2}\tval loss: {:5.2}".format(epoch, train_loss, val_loss))
         if val_loss < best_val_loss:
             best_val_loss = val_loss
