@@ -260,7 +260,7 @@ def main(args):
         pickle.dump({"image_names": test_dataset.image_names,
                      "landmarks": test_predictions}, fp)
 
-    create_submission(args.data, test_predictions, os.path.join("runs", f"{args.name}_submit.csv"))
+    create_submission(args.data, test_predictions, os.path.join("runs", f"{args.checkpoint}_submit.csv"))
 
 
 if __name__ == "__main__":

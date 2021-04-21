@@ -154,6 +154,11 @@ def main(args):
                 torch.save(model.state_dict(), fp)
 
     # 3. predict
+    train_dataset = ThousandLandmarksDataset(os.path.join(args.data, "train"), train_transforms, split="train")
+    print(f"Train sample size {len(train_dataset)}")
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True,
+                                  shuffle=True, drop_last=True)
+
     test_dataset = ThousandLandmarksDataset(os.path.join(args.data, "test"), train_transforms, split="test")
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True,
                                  shuffle=False, drop_last=False)
