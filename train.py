@@ -1,29 +1,24 @@
 """Script for baseline training. Model is ResNet18 (pretrained on ImageNet). Training takes ~ 15 mins (@ GTX 1080Ti)."""
 
 import os
-import pickle
 import sys
-import time
 from argparse import ArgumentParser
 
 import numpy as np
 import tqdm
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
-import torchvision.models as models
 from torch.nn import functional as fnn
 from torch.utils.data import DataLoader
-from torch.cuda.amp import autocast, GradScaler
 from torchvision import transforms
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from model import create_model
 from utils import NUM_PTS, CROP_SIZE
 from utils import ScaleMinSideToSize, CropCenter, TransformByKeys
 from utils import ThousandLandmarksDataset
-from utils import restore_landmarks_batch, create_submission
+from utils import restore_landmarks_batch
 
 
 torch.backends.cudnn.deterministic = True
@@ -39,7 +34,6 @@ def parse_arguments():
     parser.add_argument("--epochs", "-e", default=15, type=int)
     parser.add_argument("--learning-rate", "-lr", default=1e-3, type=float)
     parser.add_argument("--gpu", action="store_true")
-    parser.add_argument("--gamma", '-g', default=0.1, type=float)
     return parser.parse_args()
 
 
@@ -106,8 +100,8 @@ def main(args):
         CropCenter(CROP_SIZE),
         TransformByKeys(transforms.ToPILImage(), ("image",)),
         TransformByKeys(transforms.ToTensor(), ("image",)),
-        TransformByKeys(transforms.Normalize(mean=[0.39963884, 0.31994772, 0.28253724],
-                                             std=[0.33419772, 0.2864468, 0.26987]),
+        TransformByKeys(transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                             std=[0.229, 0.224, 0.225]),
                                              ("image",)
                         ),
     ])
@@ -129,9 +123,9 @@ def main(args):
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
     loss_fn = fnn.mse_loss
-    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+    scheduler = ReduceLROnPlateau(optimizer, patience=6, factor=0.3)
 
-# 2. train & validate
+    # 2. train & validate
     print("Ready for training...")
     best_val_loss = np.inf
     for epoch in range(args.epochs):
@@ -152,32 +146,6 @@ def main(args):
             best_val_loss = val_loss
             with open(os.path.join("runs", f"{args.name}_best.pth"), "wb") as fp:
                 torch.save(model.state_dict(), fp)
-
-    # 3. predict
-    train_dataset = ThousandLandmarksDataset(os.path.join(args.data, "train"), train_transforms, split="train")
-    print(f"Train sample size {len(train_dataset)}")
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True,
-                                  shuffle=True, drop_last=True)
-
-    test_dataset = ThousandLandmarksDataset(os.path.join(args.data, "test"), train_transforms, split="test")
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True,
-                                 shuffle=False, drop_last=False)
-
-    with open(os.path.join("runs", f"{args.name}_best.pth"), "rb") as fp:
-        best_state_dict = torch.load(fp, map_location="cpu")
-        model.load_state_dict(best_state_dict)
-
-    train_predictions = predict(model, train_dataloader, device)
-    with open(os.path.join("runs", f"{args.name}_train_predictions.pkl"), "wb") as fp:
-        pickle.dump({"image_names": train_dataset.image_names,
-                     "landmarks": train_predictions}, fp)
-
-    test_predictions = predict(model, test_dataloader, device)
-    with open(os.path.join("runs", f"{args.name}_test_predictions.pkl"), "wb") as fp:
-        pickle.dump({"image_names": test_dataset.image_names,
-                     "landmarks": test_predictions}, fp)
-
-    create_submission(args.data, test_predictions, os.path.join("runs", f"{args.name}_submit.csv"))
 
 
 if __name__ == "__main__":
