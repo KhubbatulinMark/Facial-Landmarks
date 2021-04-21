@@ -84,9 +84,10 @@ class ThousandLandmarksDataset(data.Dataset):
             else os.path.join(root, "test_points.csv")
         images_root = os.path.join(root, "images")
 
-        noisy_path = os.path.join(root, 'noisy.txt')
-        with open(noisy_path, "rb") as fp:
-            self.noisy_file = pickle.load(fp)
+        if split != "test":
+            noisy_path = os.path.join(root, 'noisy.txt')
+            with open(noisy_path, "rb") as fp:
+                self.noisy_file = pickle.load(fp)
 
         self.image_names = []
         self.landmarks = []
