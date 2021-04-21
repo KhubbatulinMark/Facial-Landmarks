@@ -1,12 +1,17 @@
 import os
 import pickle
 
+import random
 import cv2
 import numpy as np
 import pandas as pd
 import torch
 import tqdm
+import torchvision.transforms.functional as TF
+from PIL import Image
+
 from torch.utils import data
+
 
 np.random.seed(1234)
 torch.manual_seed(1234)
@@ -59,6 +64,139 @@ class CropCenter(object):
             landmarks = sample['landmarks'].reshape(-1, 2)
             landmarks -= torch.tensor((margin_w, margin_h), dtype=landmarks.dtype)[None, :]
             sample['landmarks'] = landmarks.reshape(-1)
+
+        return sample
+
+
+class Identity(object):
+    def __init__(self):
+        pass
+
+    def __call__(self, sample):
+        return sample
+
+
+class RandomApply(object):
+    def __init__(self, transforms, p=None):
+        self.transforms = transforms
+        self.p = p
+
+    def __call__(self, sample):
+        ind = np.random.choice(len(self.transforms), p=self.p)
+        transform = self.transforms[ind]
+        sample = transform(sample)
+        return sample
+
+
+class RandomHorizontalFlip(object):
+    def __init__(self, p):
+        self.p = p
+
+    @staticmethod
+    def revert_landmarks(labels):
+        new_labels = np.concatenate((
+            labels[128:256],
+            labels[0:128],
+            np.flipud(labels[256:546].reshape(-1, 2)).reshape(-1),
+            labels[674:802],
+            labels[546:674],
+            labels[928:1054],
+            labels[802:928],
+            labels[1054:1174],
+            labels[1428:1682],
+            labels[1174:1428],
+            np.flipud(labels[1682:1746].reshape(-1, 2)).reshape(-1),
+            np.flipud(labels[1746:1810].reshape(-1, 2)).reshape(-1),
+            np.flipud(labels[1810:1874].reshape(-1, 2)).reshape(-1),
+            np.flipud(labels[1874:1938].reshape(-1, 2)).reshape(-1),
+            labels[1940:1942],
+            labels[1938:1940]
+        ))
+        return torch.from_numpy(new_labels)
+
+    def flip_landmarks(self, labels, w):
+        landmarks = labels.reshape(-1, 2)
+        landmarks[:, 0] = w - landmarks[:, 0]
+        labels = landmarks.reshape(-1)
+        labels = self.revert_landmarks(labels)
+        return labels
+
+    def __call__(self, sample):
+        if random.random() < self.p:
+            _, w, _ = sample['image'].shape
+            sample['image'] = cv2.flip(sample['image'], 1)
+            sample['landmarks'] = self.flip_landmarks(sample['landmarks'], w)
+        return sample
+
+
+class RandomPadAndResize(object):
+    def __init__(self, percent=0.15):
+        self.percent = percent
+
+    def __call__(self, sample):
+        w, h = sample['image'].size
+        left_pad = int(random.random() * self.percent * w)
+        right_pad = int(random.random() * self.percent * w)
+        top_pad = int(random.random() * self.percent * h)
+        bottom_pad = int(random.random() * self.percent * h)
+
+        sample['image'] = TF.pad(sample['image'], padding=(left_pad, top_pad, right_pad, bottom_pad))
+
+        landmarks = sample['landmarks'].reshape(-1, 2)
+        landmarks[:, 0] += left_pad
+        landmarks[:, 1] += top_pad
+
+        new_w, new_h = sample['image'].size
+        fw = w / new_w
+        fh = h / new_h
+        sample['image'] = TF.resize(sample['image'], (w, h))
+
+        landmarks[:, 0] = landmarks[:, 0] * fw
+        landmarks[:, 1] = landmarks[:, 1] * fh
+        sample['landmarks'] = landmarks.reshape(-1)
+        return sample
+
+
+class DropoutAugmentor(object):
+    def __init__(self, p=(0., 0.01), size=(CROP_SIZE, CROP_SIZE)):
+        self.p = p
+        self.size = size
+        self.px_cnt = self.size[0] * self.size[1]
+
+    def random_coordinates(self, n):
+        salt_n = random.randint(0, n)
+        pepper_n = n - salt_n
+        salt_coords = np.random.randint(0, self.size[0], (salt_n, 2))
+        pepper_coords = np.random.randint(0, self.size[0], (pepper_n, 2))
+        return salt_coords, pepper_coords
+
+    def __call__(self, sample):
+        n = int((random.random() * (self.p[1] - self.p[0]) + self.p[0]) * self.px_cnt)
+        salt, pepper = self.random_coordinates(n)
+        image = np.array(sample['image'])
+        image[salt[:, 0], salt[:, 1]] = np.array([255, 255, 255])
+        image[pepper[:, 0], pepper[:, 1]] = np.array([0, 0, 0])
+        sample['image'] = Image.fromarray(image)
+        return sample
+
+
+class RandomRotate(object):
+    def __init__(self, max_angle, size=128):
+        self.angle = max_angle
+        self.size = size
+
+    def __call__(self, sample):
+        cur_angle = random.randint(-self.angle, self.angle)
+        sample['image'] = TF.rotate(sample['image'], angle=cur_angle)
+
+        shift = float(self.size // 2)
+        theta = np.radians(cur_angle)
+        c, s = np.cos(theta), np.sin(theta)
+        R = torch.tensor(((c, -s), (s, c))).float()
+        landmarks = sample['landmarks'].reshape(-1, 2)
+        landmarks = torch.matmul(landmarks - shift, R)
+        landmarks = landmarks + shift
+        sample['landmarks'] = landmarks.reshape(-1)
 
         return sample
 
