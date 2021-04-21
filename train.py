@@ -16,7 +16,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from model import create_model
 from utils import NUM_PTS, CROP_SIZE
-from utils import ScaleMinSideToSize, CropCenter, TransformByKeys
+from utils import ScaleMinSideToSize, CropCenter, TransformByKeys, RandomApply, RandomPadAndResize, RandomRotate
 from utils import ThousandLandmarksDataset
 from utils import restore_landmarks_batch
 
@@ -96,14 +96,26 @@ def main(args):
 
     # 1. prepare data & models
     train_transforms = transforms.Compose([
+        # RandomHorizontalFlip(p=0.5),
+        ScaleMinSideToSize((CROP_SIZE, CROP_SIZE)),
+        CropCenter(CROP_SIZE),
+        TransformByKeys(transforms.ToPILImage(), ("image",)),
+        RandomApply([
+            RandomPadAndResize(percent=0.15),
+            RandomRotate(max_angle=15),
+        ], p=[0.15, 0.85]),
+        TransformByKeys(transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.2, hue=0.03), ("image",)),
+        TransformByKeys(transforms.RandomGrayscale(p=0.1), ("image",)),
+        TransformByKeys(transforms.ToTensor(), ("image",)),
+        TransformByKeys(transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]), ("image",)),
+    ])
+
+    test_transforms = transforms.Compose([
         ScaleMinSideToSize((CROP_SIZE, CROP_SIZE)),
         CropCenter(CROP_SIZE),
         TransformByKeys(transforms.ToPILImage(), ("image",)),
         TransformByKeys(transforms.ToTensor(), ("image",)),
-        TransformByKeys(transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                             std=[0.229, 0.224, 0.225]),
-                                             ("image",)
-                        ),
+        TransformByKeys(transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]), ("image",)),
     ])
 
     print("Reading data...")
