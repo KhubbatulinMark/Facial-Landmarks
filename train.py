@@ -134,8 +134,7 @@ def main(args):
     model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
-    loss_fn = fnn.l1_loss()
-    loss_val = fnn.mse_loss
+    loss_fn = fnn.mse_loss
 
     #scheduler = ReduceLROnPlateau(optimizer, patience=6, factor=0.3)
 
