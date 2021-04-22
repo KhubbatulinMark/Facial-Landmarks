@@ -134,8 +134,10 @@ def main(args):
     model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
-    loss_fn = fnn.mse_loss
-    scheduler = ReduceLROnPlateau(optimizer, patience=6, factor=0.3)
+    loss_fn = fnn.l1_loss()
+    loss_val = fnn.mse_loss
+
+    #scheduler = ReduceLROnPlateau(optimizer, patience=6, factor=0.3)
 
     # 2. train & validate
     print("Ready for training...")
@@ -152,7 +154,7 @@ def main(args):
                             loss_fn,
                             device=device
                             )
-        scheduler.step(val_loss)
+
         print("Epoch #{:2}:\ttrain loss: {:5.2}\tval loss: {:5.2}".format(epoch, train_loss, val_loss))
         if val_loss < best_val_loss:
             best_val_loss = val_loss
