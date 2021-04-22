@@ -230,7 +230,7 @@ class ThousandLandmarksDataset(data.Dataset):
             with open(ignore_path, "rb") as fp:
                 self.ignore_file = pickle.load(fp)
 
-        self.ignore_file = []
+        self.noisy_file = []
         self.image_names = []
         self.landmarks = []
 
