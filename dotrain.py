@@ -127,7 +127,7 @@ def main(args):
 
     model.to(device)
 
-    with open(os.path.join("runs", f"{args.checkpoint}_best.pth"), "rb") as fp:
+    with open(os.path.join("runs", f"{args.name}_best.pth"), "rb") as fp:
         best_state_dict = torch.load(fp, map_location="cpu")
         model.load_state_dict(best_state_dict)
 
