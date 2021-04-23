@@ -58,8 +58,7 @@ def train(model, loader, loss_fn, optimizer, device):
 
 def validate(model, loader, loss_fn, device):
     model.eval()
-    val_loss = []
-    print(f"validating... {len(loader)} iters \n")
+    val_loss, real_val_loss = [], []
     for batch in tqdm.tqdm(loader, total=len(loader), desc="validation..."):
         images = batch["image"].to(device)
         landmarks = batch["landmarks"]
@@ -69,7 +68,22 @@ def validate(model, loader, loss_fn, device):
         loss = loss_fn(pred_landmarks, landmarks, reduction="mean")
         val_loss.append(loss.item())
 
-    return np.mean(val_loss)
+        # Расчет "правильного" лосса
+        fs = batch["scale_coef"].numpy()
+        # Вытаскиваем инфо о кромках
+        margins_x = batch["crop_margin_x"].numpy()
+        margins_y = batch["crop_margin_y"].numpy()
+        # Пересчитываем в исходные координаты предсказания модели
+        pred_landmarks = pred_landmarks.numpy().reshape((len(pred_landmarks), NUM_PTS, 2))
+        prediction = restore_landmarks_batch(pred_landmarks, fs, margins_x, margins_y)
+        # Пересчитываем в исходные координаты ground_true - координаты
+        landmarks = landmarks.numpy().reshape((len(pred_landmarks), NUM_PTS, 2))
+        real_landmarks = restore_landmarks_batch(landmarks, fs, margins_x, margins_y)
+        # Добавяем MSE в список real_val_loss
+        real_loss = (prediction.reshape(-1) - real_landmarks.reshape(-1)) ** 2
+        real_val_loss.append(np.mean(real_loss))
+
+    return np.mean(val_loss), np.mean(real_val_loss)
 
 
 def predict(model, loader, device):
@@ -100,10 +114,6 @@ def main(args):
         ScaleMinSideToSize((CROP_SIZE, CROP_SIZE)),
         CropCenter(CROP_SIZE),
         TransformByKeys(transforms.ToPILImage(), ("image",)),
-        RandomApply([
-            RandomPadAndResize(percent=0.15),
-            RandomRotate(max_angle=15),
-        ], p=[0.15, 0.85]),
         #TransformByKeys(transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.2, hue=0.03), ("image",)),
         #TransformByKeys(transforms.RandomGrayscale(p=0.1), ("image",)),
         TransformByKeys(transforms.ToTensor(), ("image",)),
@@ -130,8 +140,9 @@ def main(args):
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
     loss_fn = fnn.mse_loss
 
-    #scheduler = ReduceLROnPlateau(optimizer, patience=6, factor=0.3)
-
+    scheduler = optim.lr_scheduler.OneCycleLR(
+        optimizer, max_lr=0.1, steps_per_epoch=len(train_dataloader), epochs=args.epochs
+    )
     # 2. train & validate
     print("Ready for training...")
     best_val_loss = np.inf

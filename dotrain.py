@@ -58,8 +58,7 @@ def train(model, loader, loss_fn, optimizer, device):
 
 def validate(model, loader, loss_fn, device):
     model.eval()
-    val_loss = []
-    print(f"validating... {len(loader)} iters \n")
+    val_loss, real_val_loss = [], []
     for batch in tqdm.tqdm(loader, total=len(loader), desc="validation..."):
         images = batch["image"].to(device)
         landmarks = batch["landmarks"]
@@ -69,7 +68,22 @@ def validate(model, loader, loss_fn, device):
         loss = loss_fn(pred_landmarks, landmarks, reduction="mean")
         val_loss.append(loss.item())
 
-    return np.mean(val_loss)
+        # Расчет "правильного" лосса
+        fs = batch["scale_coef"].numpy()
+        # Вытаскиваем инфо о кромках
+        margins_x = batch["crop_margin_x"].numpy()
+        margins_y = batch["crop_margin_y"].numpy()
+        # Пересчитываем в исходные координаты предсказания модели
+        pred_landmarks = pred_landmarks.numpy().reshape((len(pred_landmarks), NUM_PTS, 2))
+        prediction = restore_landmarks_batch(pred_landmarks, fs, margins_x, margins_y)
+        # Пересчитываем в исходные координаты ground_true - координаты
+        landmarks = landmarks.numpy().reshape((len(pred_landmarks), NUM_PTS, 2))
+        real_landmarks = restore_landmarks_batch(landmarks, fs, margins_x, margins_y)
+        # Добавяем MSE в список real_val_loss
+        real_loss = (prediction.reshape(-1) - real_landmarks.reshape(-1)) ** 2
+        real_val_loss.append(np.mean(real_loss))
+
+    return np.mean(val_loss), np.mean(real_val_loss)
 
 
 def predict(model, loader, device):
