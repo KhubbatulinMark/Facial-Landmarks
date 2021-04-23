@@ -225,8 +225,7 @@ def main(args):
         TransformByKeys(transforms.ToPILImage(), ("image",)),
         TransformByKeys(transforms.ToTensor(), ("image",)),
         TransformByKeys(transforms.Normalize(mean=[0.39963884, 0.31994772, 0.28253724],
-                                             std=[0.33419772, 0.2864468, 0.26987]),
-                        ("image",)
+                                             std=[0.33419772, 0.2864468, 0.26987]), ("image",)
                         ),
     ])
 
