@@ -24,7 +24,6 @@ SUBMISSION_HEADER = "file_name,Point_M0_X,Point_M0_Y,Point_M1_X,Point_M1_Y,Point
 
 class ScaleMinSideToSize(object):
     def __init__(self, size=(CROP_SIZE, CROP_SIZE), elem_name='image'):
-        # self.size = torch.tensor(size, dtype=torch.float)
         self.size = np.asarray(size, dtype=np.float)
         self.elem_name = elem_name
 

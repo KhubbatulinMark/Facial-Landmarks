@@ -37,7 +37,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def train(model, loader, loss_fn, optimizer, device):
+def train(model, loader, loss_fn, optimizer, device, scheduler=None):
     model.train()
     train_loss = []
     print(f"training... {len(loader)} iters \n")
@@ -52,6 +52,8 @@ def train(model, loader, loss_fn, optimizer, device):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        if scheduler:
+            scheduler.step()
 
     return np.mean(train_loss)
 
@@ -137,7 +139,13 @@ def main(args):
 
     model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
+    optimizer = optim.SGD(
+        filter(lambda p: p.requires_grad, model.parameters()),
+        lr=args.learning_rate,
+        momentum=0.9,
+        weight_decay=1e-04,
+    )
+
     loss_fn = fnn.mse_loss
 
     scheduler = optim.lr_scheduler.OneCycleLR(
@@ -150,16 +158,18 @@ def main(args):
         train_loss = train(model,
                            train_dataloader,
                            loss_fn, optimizer,
-                           device=device
+                           device=device,
+                           scheduler=scheduler
                            )
 
-        val_loss = validate(model,
+        val_loss, real_val_loss = validate(model,
                             val_dataloader,
                             loss_fn,
-                            device=device
+                            device=device,
                             )
 
-        print("Epoch #{:2}:\ttrain loss: {:5.2}\tval loss: {:5.2}".format(epoch, train_loss, val_loss))
+        print("Epoch #{:2}:\ttrain loss: {:5.3}\tval loss: {:5.3} /{:5.3}".format(epoch, train_loss, val_loss,
+                                                                                  real_val_loss))
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             with open(os.path.join("runs", f"{args.name}_best.pth"), "wb") as fp:
