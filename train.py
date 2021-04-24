@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 import numpy as np
 import tqdm
 
+import cv2
 import torch
 import torch.optim as optim
 from torch.nn import functional as fnn
@@ -17,7 +18,7 @@ import albumentations as A
 
 from model import create_model
 from utils import NUM_PTS, CROP_SIZE
-from utils import ScaleMinSideToSize, CropCenter, TransformByKeys, RandomApply, RandomPadAndResize, RandomRotate
+from utils import ScaleMinSideToSize, CropCenter, TransformByKeys, FaceHorizontalFlip
 from utils import ThousandLandmarksDataset
 from utils import restore_landmarks_batch
 
