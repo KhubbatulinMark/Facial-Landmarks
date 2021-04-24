@@ -13,6 +13,7 @@ from torch.nn import functional as fnn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import albumentations as A
 
 from model import create_model
 from utils import NUM_PTS, CROP_SIZE
@@ -116,6 +117,11 @@ def main(args):
         ScaleMinSideToSize((CROP_SIZE, CROP_SIZE)),
         CropCenter(CROP_SIZE),
         TransformByKeys(transforms.ToPILImage(), ("image",)),
+        FaceHorizontalFlip(p=1.0),
+        A.RandomBrightness(limit=0.2, p=0.5),
+        A.RandomContrast(limit=0.2, p=0.5),
+        A.Blur(blur_limit=3, p=0.5),
+        A.Rotate(border_mode=cv2.BORDER_CONSTANT, limit=20, p=0.8),
         #TransformByKeys(transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.2, hue=0.03), ("image",)),
         #TransformByKeys(transforms.RandomGrayscale(p=0.1), ("image",)),
         TransformByKeys(transforms.ToTensor(), ("image",)),
