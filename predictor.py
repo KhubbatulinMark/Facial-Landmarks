@@ -105,6 +105,7 @@ class ThousandLandmarksDataset(data.Dataset):
             with open(noisy_path, "rb") as fp:
                 self.noisy_file = pickle.load(fp)
 
+        self.noisy_file = []
         self.image_names = []
         self.landmarks = []
 
