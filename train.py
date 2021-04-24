@@ -18,7 +18,7 @@ import albumentations as A
 
 from model import create_model
 from utils import NUM_PTS, CROP_SIZE
-from utils import ScaleMinSideToSize, CropCenter, TransformByKeys, FaceHorizontalFlip
+from utils import ScaleMinSideToSize, CropCenter, TransformByKeys, RandomApply, RandomRotate, RandomPadAndResize
 from utils import ThousandLandmarksDataset
 from utils import restore_landmarks_batch
 
@@ -118,9 +118,12 @@ def main(args):
         ScaleMinSideToSize((CROP_SIZE, CROP_SIZE)),
         CropCenter(CROP_SIZE),
         TransformByKeys(transforms.ToPILImage(), ("image",)),
-        FaceHorizontalFlip(p=1.0),
-        #TransformByKeys(transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.2, hue=0.03), ("image",)),
-        #TransformByKeys(transforms.RandomGrayscale(p=0.1), ("image",)),
+        RandomApply([
+            RandomPadAndResize(percent=0.15),
+            RandomRotate(max_angle=15),
+        ], p=[0.15, 0.85]),
+        TransformByKeys(transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.2, hue=0.03), ("image",)),
+        TransformByKeys(transforms.RandomGrayscale(p=0.1), ("image",)),
         TransformByKeys(transforms.ToTensor(), ("image",)),
         TransformByKeys(transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), ("image",)),
     ])
