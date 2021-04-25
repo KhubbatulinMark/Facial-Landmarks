@@ -96,16 +96,10 @@ class ThousandLandmarksDataset(data.Dataset):
     def __init__(self, root, transforms, split="train"):
         super(ThousandLandmarksDataset, self).__init__()
         self.root = root
-        landmark_file_name = os.path.join(root, 'landmarks.csv') if split != "test" \
+        landmark_file_name = os.path.join(root, 'landmarks_new.csv') if split != "test" \
             else os.path.join(root, "test_points.csv")
         images_root = os.path.join(root, "images")
 
-        if split != "test":
-            noisy_path = os.path.join(root, 'noisy.txt')
-            with open(noisy_path, "rb") as fp:
-                self.noisy_file = pickle.load(fp)
-
-        self.noisy_file = []
         self.image_names = []
         self.landmarks = []
 
@@ -119,7 +113,7 @@ class ThousandLandmarksDataset(data.Dataset):
                     continue  # skip header
                 elements = line.strip().split("\t")
                 image_name = os.path.join(images_root, elements[0])
-                if (split != 'test') and (elements[0] in self.noisy_file):
+                if split != 'test':
                     continue
                 self.image_names.append(image_name)
 
