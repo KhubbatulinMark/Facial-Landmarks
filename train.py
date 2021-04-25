@@ -34,7 +34,7 @@ def parse_arguments():
     parser.add_argument("--data", "-d", help="Path to dir with target images & landmarks.", default=None)
     parser.add_argument("--batch-size", "-b", default=128, type=int)  # 512 is OK for resnet18 finetuning @ 3GB of VRAM
     parser.add_argument("--epochs", "-e", default=15, type=int)
-    parser.add_argument("--learning-rate", "-lr", default=1e-3, type=float)
+    parser.add_argument("--learning-rate", "-lr", default=2e-3, type=float)
     parser.add_argument("--gpu", action="store_true")
     return parser.parse_args()
 
@@ -141,13 +141,13 @@ def main(args):
 
     optimizer = optim.AdamW(model.parameters(),
         lr=args.learning_rate,
-        weight_decay=1e-03,
+        weight_decay=5e-04,
         amsgrad=True)
 
     loss_fn = fnn.mse_loss
 
     scheduler = optim.lr_scheduler.OneCycleLR(
-        optimizer, max_lr=0.1, steps_per_epoch=len(train_dataloader), epochs=args.epochs
+        optimizer, max_lr=0.2, steps_per_epoch=len(train_dataloader), epochs=args.epochs
     )
     # 2. train & validate
     print("Ready for training...")
