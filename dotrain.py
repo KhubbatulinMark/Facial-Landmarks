@@ -160,13 +160,14 @@ def main(args):
                            device=device
                            )
 
-        val_loss = validate(model,
+        val_loss, real_val_loss = validate(model,
                             val_dataloader,
                             loss_fn,
-                            device=device
+                            device=device,
                             )
 
-        print("Epoch #{:2}:\ttrain loss: {:5.2}\tval loss: {:5.2}".format(epoch, train_loss, val_loss))
+        print("Epoch #{:2}:\ttrain loss: {:5.3}\tval loss: {:5.3} /{:5.3}".format(epoch, train_loss, val_loss,
+                                                                                  real_val_loss))
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             with open(os.path.join("runs", f"{args.name}_best.pth"), "wb") as fp:
