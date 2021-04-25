@@ -148,7 +148,7 @@ def main(args):
 
     optimizer = optim.AdamW(model.parameters(),
         lr=args.learning_rate,
-        weight_decay=1e-04,
+        weight_decay=1e-03,
         amsgrad=True)
 
     loss_fn = fnn.mse_loss
