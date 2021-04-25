@@ -145,7 +145,7 @@ def main(args):
 
     model.to(device)
 
-    optimizer = optim.AdamW(
+    optimizer = optim.AdamW(model.parameters(),
         lr=args.learning_rate,
         weight_decay=1e-04,
         amsgrad=True)
