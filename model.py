@@ -5,12 +5,7 @@ from utils import NUM_PTS, CROP_SIZE
 
 
 def create_model():
-    model = models.densenet169(pretrained=True)
-    for param in model.parameters():
-        param.requires_grad = True
+    model = models.resnext50_32x4d(pretrained=True)
 
-    model.classifier = nn.Linear(model.classifier.in_features, 2 * NUM_PTS, bias=True)
-
-    for param in model.classifier.parameters():
-        param.requires_grad = True
+    model.fc = nn.Linear(model.fc.in_features, 2 * NUM_PTS, bias=True)
     return model

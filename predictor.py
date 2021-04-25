@@ -217,8 +217,7 @@ def main(args):
         CropCenter(CROP_SIZE),
         TransformByKeys(transforms.ToPILImage(), ("image",)),
         TransformByKeys(transforms.ToTensor(), ("image",)),
-        TransformByKeys(transforms.Normalize(mean=[0.39963884, 0.31994772, 0.28253724],
-                                             std=[0.33419772, 0.2864468, 0.26987]), ("image",)
+        TransformByKeys(transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), ("image",)
                         ),
     ])
 
