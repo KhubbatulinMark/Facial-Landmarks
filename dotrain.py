@@ -145,10 +145,10 @@ def main(args):
         best_state_dict = torch.load(fp, map_location="cpu")
         model.load_state_dict(best_state_dict)
 
-    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, amsgrad=True, weight_decay=0.02)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
     loss_fn = fnn.mse_loss
 
-    #scheduler = ReduceLROnPlateau(optimizer, patience=6, factor=0.3)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=1, eta_min=0.001, last_epoch=-1)
 
     # 2. train & validate
     print("Ready for training...")
