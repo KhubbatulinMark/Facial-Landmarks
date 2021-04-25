@@ -145,7 +145,10 @@ def main(args):
         best_state_dict = torch.load(fp, map_location="cpu")
         model.load_state_dict(best_state_dict)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+    optimizer = optim.AdamW(model.parameters(),
+        lr=args.learning_rate,
+        weight_decay=1e-02,
+        amsgrad=True)
     loss_fn = fnn.mse_loss
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=1, eta_min=0.001, last_epoch=-1)
