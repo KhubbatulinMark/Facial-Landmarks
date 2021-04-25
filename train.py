@@ -145,12 +145,10 @@ def main(args):
 
     model.to(device)
 
-    optimizer = optim.SGD(
-        filter(lambda p: p.requires_grad, model.parameters()),
+    optimizer = optim.AdamW(
         lr=args.learning_rate,
-        momentum=0.9,
         weight_decay=1e-04,
-    )
+        amsgrad=True)
 
     loss_fn = fnn.mse_loss
 
