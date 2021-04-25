@@ -243,7 +243,7 @@ class ThousandLandmarksDataset(data.Dataset):
                 elements = line.strip().split("\t")
                 image_name = os.path.join(images_root, elements[0])
                 if (split != 'test') and (elements[0] in self.ignore_file):
-                    continue
+                    print(i)
                 self.image_names.append(image_name)
 
                 if split in ("train", "val"):
