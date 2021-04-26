@@ -37,7 +37,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def train(model, loader, loss_fn, optimizer, device):
+def train(model, loader, loss_fn, optimizer, device, scheduler=None):
     model.train()
     train_loss = []
     print(f"training... {len(loader)} iters \n")
@@ -52,6 +52,8 @@ def train(model, loader, loss_fn, optimizer, device):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        if scheduler:
+            scheduler.step()
 
     return np.mean(train_loss)
 
@@ -147,7 +149,7 @@ def main(args):
 
     optimizer = optim.AdamW(model.parameters(),
         lr=args.learning_rate,
-        weight_decay=1e-02,
+        weight_decay=1e-03,
         amsgrad=True)
     loss_fn = fnn.mse_loss
 
@@ -160,7 +162,8 @@ def main(args):
         train_loss = train(model,
                            train_dataloader,
                            loss_fn, optimizer,
-                           device=device
+                           device=device,
+                           scheduler=scheduler
                            )
 
         val_loss, real_val_loss = validate(model,
