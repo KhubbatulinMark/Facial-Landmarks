@@ -177,6 +177,7 @@ def main(args):
                                                                                   real_val_loss))
         if val_loss < best_val_loss:
             best_val_loss = val_loss
+            print('saving')
             with open(os.path.join("runs", f"{args.name}_best.pth"), "wb") as fp:
                 torch.save(model.state_dict(), fp)
 
