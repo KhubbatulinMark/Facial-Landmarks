@@ -153,7 +153,7 @@ def main(args):
         amsgrad=True)
     loss_fn = fnn.mse_loss
 
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=1, eta_min=0.001, last_epoch=-1)
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.1, steps_per_epoch=10, epochs=10)
 
     # 2. train & validate
     print("Ready for training...")
