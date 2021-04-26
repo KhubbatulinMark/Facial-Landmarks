@@ -153,7 +153,7 @@ def main(args):
         amsgrad=True)
     loss_fn = fnn.mse_loss
 
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.1, steps_per_epoch=10, epochs=10)
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.1, steps_per_epoch=793, epochs=5)
 
     # 2. train & validate
     print("Ready for training...")
