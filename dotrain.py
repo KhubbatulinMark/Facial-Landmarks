@@ -33,6 +33,7 @@ def parse_arguments():
     parser.add_argument("--batch-size", "-b", default=128, type=int)  # 512 is OK for resnet18 finetuning @ 3GB of VRAM
     parser.add_argument("--epochs", "-e", default=15, type=int)
     parser.add_argument("--learning-rate", "-lr", default=1e-3, type=float)
+    parser.add_argument("--loss", "-l", type=float)
     parser.add_argument("--gpu", action="store_true")
     return parser.parse_args()
 
@@ -157,7 +158,7 @@ def main(args):
 
     # 2. train & validate
     print("Ready for training...")
-    best_val_loss = np.inf
+    best_val_loss = args.loss
     for epoch in range(args.epochs):
         train_loss = train(model,
                            train_dataloader,
